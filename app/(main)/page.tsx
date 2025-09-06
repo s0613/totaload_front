@@ -2,7 +2,6 @@
 
 import { useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import Sidebar from "@/components/common/Sidebar"
 import { useAuthStore } from "@/lib/auth"
 import { toast } from "sonner"
 import CertificateList from "@/features/certificate/CertificateList"
@@ -10,7 +9,7 @@ import CertificateList from "@/features/certificate/CertificateList"
 export default function ExportCertApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoggedIn, isHydrated } = useAuthStore();
+  const { user, isLoggedIn, isHydrated, isAuthChecked } = useAuthStore();
 
   // OAuth 에러 처리
   useEffect(() => {
@@ -23,13 +22,13 @@ export default function ExportCertApp() {
 
   // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
   useEffect(() => {
-    if (isHydrated && !isLoggedIn) {
+    if (isHydrated && isAuthChecked && !isLoggedIn) {
       router.push('/login');
     }
-  }, [isHydrated, isLoggedIn, router]);
+  }, [isHydrated, isAuthChecked, isLoggedIn, router]);
 
   // Hydration이 완료되지 않았거나 로딩 중일 때는 로딩 화면 표시
-  if (!isHydrated) {
+  if (!isHydrated || !isAuthChecked) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -46,10 +45,5 @@ export default function ExportCertApp() {
     );
   }
 
-  return (
-    <div className="flex min-h-screen bg-white">
-      <Sidebar />
-      <CertificateList />
-    </div>
-  );
+  return <CertificateList />;
 }

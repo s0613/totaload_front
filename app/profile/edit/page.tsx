@@ -32,15 +32,15 @@ export default function EditProfilePage() {
   }, [isLoggedIn, router, user])
 
   const loadUserDetails = async () => {
-    if (!user?.userId) return
-
     try {
-      const details = await userService.getUserDetails(user.userId)
-      setFormData({
-        name: details.name || "",
-        company: details.company || "",
-        businessNumber: details.businessNumber || "",
-      })
+      const details = await userService.getCurrentUser()
+      if (details) {
+        setFormData({
+          name: details.name || "",
+          company: details.company || "",
+          businessNumber: details.businessNumber || "",
+        })
+      }
     } catch (error) {
       console.error("사용자 정보 로드 실패:", error)
       toast.error("사용자 정보를 불러오는데 실패했습니다.")

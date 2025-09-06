@@ -1,13 +1,16 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
-// Next.js 프록시 설정을 사용하므로 상대 경로 사용
-const API_BASE_URL = '/api';
+// 개발 모드에서는 항상 동일 오리진 프록시(`/api`)를 강제해
+// 303 리다이렉트로 인한 교차 오리진 CORS 차단을 예방
+const IS_DEV = process.env.NODE_ENV === 'development';
+const CONFIGURED_API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = IS_DEV ? '/api' : (CONFIGURED_API_URL || '/api');
 
 console.log('API 설정:', {
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   API_BASE_URL,
   NODE_ENV: process.env.NODE_ENV,
-  isDevelopment: process.env.NODE_ENV === 'development'
+  isDevelopment: IS_DEV,
 });
 
 export const api: AxiosInstance = axios.create({
@@ -17,6 +20,8 @@ export const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    // 백엔드가 XHR 요청임을 인지해 303 리다이렉트 대신 JSON 응답을 반환할 수 있도록 힌트
+    'X-Requested-With': 'XMLHttpRequest',
   },
 });
 
@@ -60,14 +65,21 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = String(error.config?.url || '');
 
-    console.error('응답 에러:', {
+    // 더 자세한 에러 정보 로깅
+    console.group('🚨 API 응답 에러');
+    console.error('기본 정보:', {
       status,
-      data: error.response?.data,
+      statusText: error.response?.statusText,
       url,
-      message: error.message,
-      headers: error.response?.headers,
-      cookies: error.response?.headers?.['set-cookie'],
+      method: error.config?.method?.toUpperCase(),
+      baseURL: error.config?.baseURL,
     });
+    console.error('에러 메시지:', error.message);
+    console.error('응답 데이터:', error.response?.data);
+    console.error('요청 헤더:', error.config?.headers);
+    console.error('응답 헤더:', error.response?.headers);
+    console.error('전체 에러 객체:', error);
+    console.groupEnd();
 
     // 401 시 전역 리다이렉트 (인증 엔드포인트는 예외)
     if (status === 401) {

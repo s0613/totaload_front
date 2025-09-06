@@ -3,7 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
+    // 개발 기본값은 프론트 도메인(`/api`)을 통해 프록시로 백엔드를 호출하도록 설정
+    // (교차 오리진 리다이렉트로 인한 CORS 차단 방지)
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '/api',
   },
   async rewrites() {
     return [

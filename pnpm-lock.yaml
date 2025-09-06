@@ -92,6 +92,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: 1.1.6
         version: 1.1.6(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      '@tosspayments/tosspayments-sdk':
+        specifier: ^2.3.7
+        version: 2.3.7
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.21(postcss@8.5.6)
@@ -1314,6 +1317,9 @@ packages:
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
+
+  '@tosspayments/tosspayments-sdk@2.3.7':
+    resolution: {integrity: sha512-FTN+KNf8ruF9ydHzNAq/PKf/GYdJJOAS1Mwj3voJfIQ8cJacrKuwsanRh1l8uIcIZhTISCMdGl5DOex43u+3ng==}
 
   '@types/d3-array@3.2.1':
     resolution: {integrity: sha512-Y2Jn2idRrLzUfAKV2LyRImR+y4oa2AntrgID95SHJxuMUrkNXmanDSed71sRNZysveJVt1hLLemQZIady0FpEg==}
@@ -3328,6 +3334,8 @@ snapshots:
   '@swc/helpers@0.5.15':
     dependencies:
       tslib: 2.8.1
+
+  '@tosspayments/tosspayments-sdk@2.3.7': {}
 
   '@types/d3-array@3.2.1': {}
 

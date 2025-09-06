@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { CertificateService, Certificate } from "./CertificateService";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Download, Calendar, FileText, Car, User, AlertTriangle, CheckCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, AlertTriangle, Heart, Share2, Star } from "lucide-react";
 
 interface CertificateDetailProps {
   certificateId: number;
@@ -17,6 +16,8 @@ export default function CertificateDetail({ certificateId }: CertificateDetailPr
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [activeTab, setActiveTab] = useState('vehicle');
 
   useEffect(() => {
     const fetchCertificate = async () => {
@@ -123,242 +124,285 @@ export default function CertificateDetail({ certificateId }: CertificateDetailPr
     );
   }
 
-  const handleDownloadPdf = async () => {
-    try {
-      await CertificateService.downloadCertificatePdf(
-        certificate.pdfFilePath, 
-        `certificate_${certificate.certNumber}.pdf`
-      );
-      toast.success('PDF 다운로드가 시작되었습니다.');
-    } catch (error) {
-      console.error('PDF 다운로드 실패:', error);
-      toast.error('PDF 다운로드에 실패했습니다.');
+  const handleIssueCertificate = () => {
+    if (!certificate) {
+      toast.error('인증서 정보가 없습니다.');
+      return;
     }
+
+    // 결제 진행 알림
+    toast.info('결제 페이지로 이동합니다...');
+
+    // 결제 페이지로 이동 (인증서 정보를 쿼리 파라미터로 전달)
+    const paymentParams = new URLSearchParams({
+      certificateId: certificate.id.toString(),
+      manufacturer: certificate.manufacturer,
+      modelName: certificate.modelName,
+      manufactureYear: certificate.manufactureYear.toString(),
+      amount: '70000', // 인증서 발급 비용
+      service: 'certificate_issue',
+      // 추가 정보
+      vin: certificate.vin || '',
+      country: certificate.country || '',
+      orderName: `${certificate.manufacturer} ${certificate.modelName} 인증서 발급`
+    });
+    
+    router.push(`/payments?${paymentParams.toString()}`);
+  };
+
+  // 차량 이미지들 (실제로는 certificate에서 가져오거나 기본 이미지 사용)
+  const vehicleImages = [
+    "/placeholder.jpg", // 메인 이미지
+    "/placeholder.jpg", // 실내
+    "/placeholder.jpg", // 외관
+    "/placeholder.jpg", // 엔진룸
+    "/placeholder.jpg"  // 트렁크
+  ];
+
+  // 품질 등급 계산 (A, B, C 등급)
+  const getQualityGrade = () => {
+    if (!certificate) return 'A';
+    const age = new Date().getFullYear() - certificate.manufactureYear;
+    const mileage = certificate.mileage;
+    
+    if (age <= 3 && mileage <= 50000) return 'A';
+    if (age <= 5 && mileage <= 100000) return 'B';
+    return 'C';
+  };
+
+  const getQualityScore = () => {
+    const grade = getQualityGrade();
+    return grade === 'A' ? 95 : grade === 'B' ? 85 : 75;
+  };
+
+  // 예상 인증서 발급 시간
+  const getEstimatedTime = () => {
+    return "약 2-3분";
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* 헤더 */}
-        <header className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={() => router.push('/certificates')}
-                variant="ghost"
-                size="sm"
-                className="hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                목록으로
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">인증서 상세정보</h1>
-                <p className="text-gray-600 mt-1">인증번호: {certificate.certNumber}</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-white">
+      {/* 상단 네비게이션 */}
+      <div className="bg-white border-b sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center h-16">
             <Button
-              onClick={handleDownloadPdf}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => router.back()}
+              variant="ghost"
+              size="sm"
+              className="mr-4"
             >
-              <Download className="w-4 h-4 mr-2" />
-              인증서 발급
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              뒤로가기
             </Button>
-          </div>
-        </header>
-
-        {/* 메인 콘텐츠 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 좌측: 기본 정보 */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* 인증서 상태 */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-3 h-3 rounded-full ${isValid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <h3 className="text-lg font-semibold">인증서 상태</h3>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">상태</span>
-                    <span className={`font-semibold ${isValid ? 'text-green-600' : 'text-red-600'}`}>
-                      {isValid ? '유효' : '만료'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">남은 일수</span>
-                    <span className={`font-semibold ${isValid ? 'text-blue-600' : 'text-red-600'}`}>
-                      {isValid ? `${daysUntilExpiry}일` : '만료됨'}
-                    </span>
-                  </div>
-                  {isExpiringSoon && (
-                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-yellow-600" />
-                        <span className="text-yellow-800 text-sm font-medium">만료 임박</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 인증서 정보 */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold">인증서 정보</h3>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">발급일</span>
-                    <span className="text-sm font-medium">
-                      {new Date(certificate.issueDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">만료일</span>
-                    <span className="text-sm font-medium">
-                      {new Date(certificate.expireDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">검사일</span>
-                    <span className="text-sm font-medium">
-                      {new Date(certificate.inspectDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">발급기관</span>
-                    <span className="text-sm font-medium">{certificate.issuedBy}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 검사원 정보 */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <User className="w-5 h-5 text-green-600" />
-                  <h3 className="text-lg font-semibold">검사원 정보</h3>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">검사원 코드</span>
-                    <span className="text-sm font-mono font-medium">{certificate.inspectorCode}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">검사원명</span>
-                    <span className="text-sm font-medium">{certificate.inspectorName}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 우측: 차량 정보 및 상세 */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* 차량 정보 */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <Car className="w-6 h-6 text-purple-600" />
-                  <h3 className="text-xl font-semibold">차량 정보</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">제조사</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{certificate.manufacturer}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">모델명</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{certificate.modelName}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">제조년도</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">{certificate.manufactureYear}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">VIN</label>
-                      <p className="text-lg font-mono font-semibold text-gray-900 mt-1">{certificate.vin}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">최초등록일</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">
-                        {new Date(certificate.firstRegisterDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">주행거리</label>
-                      <p className="text-lg font-semibold text-gray-900 mt-1">
-                        {certificate.mileage.toLocaleString()} km
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 인증서 요약 */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-4">인증서 요약</h3>
-                <div className="prose prose-gray max-w-none">
-                  <p className="text-gray-700 leading-relaxed">
-                    본 인증서는 <strong>{certificate.manufacturer} {certificate.modelName}</strong> 차량에 대한 
-                    수출자동차품질인증서(ISO 17024)입니다. 해당 차량은 {new Date(certificate.inspectDate).toLocaleDateString()}에 
-                    실시된 검사를 통과하여 {new Date(certificate.issueDate).toLocaleDateString()}에 발급되었으며, 
-                    {new Date(certificate.expireDate).toLocaleDateString()}까지 유효합니다.
-                  </p>
-                  
-                  {!isValid && (
-                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
-                        <span className="text-red-800 font-medium">인증서가 만료되었습니다</span>
-                      </div>
-                      <p className="text-red-700 text-sm mt-1">
-                        재검사를 받아 인증서를 갱신하시기 바랍니다.
-                      </p>
-                    </div>
-                  )}
-                  
-                  {isExpiringSoon && (
-                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-yellow-600" />
-                        <span className="text-yellow-800 font-medium">인증서 만료 임박</span>
-                      </div>
-                      <p className="text-yellow-700 text-sm mt-1">
-                        {daysUntilExpiry}일 후 만료됩니다. 만료일 이전에 재검사를 받으시기 바랍니다.
-                      </p>
-                    </div>
-                  )}
-
-                  {isValid && !isExpiringSoon && (
-                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span className="text-green-800 font-medium">인증서가 유효합니다</span>
-                      </div>
-                      <p className="text-green-700 text-sm mt-1">
-                        {daysUntilExpiry}일 후 만료됩니다. 만료일 이전에 재검사를 받으시기 바랍니다.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-
+            <div className="flex-1" />
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm">
+                <Heart className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm">
+                <Share2 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* 왼쪽: 이미지 갤러리 */}
+          <div className="space-y-4">
+            {/* 메인 이미지 */}
+            <div className="relative aspect-[4/3] bg-white rounded-lg overflow-hidden shadow-sm border">
+              <img
+                src={vehicleImages[selectedImage]}
+                alt={`${certificate?.manufacturer} ${certificate?.modelName}`}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-4 left-4">
+                <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                  인증차량
+                </span>
+              </div>
+            </div>
+
+            {/* 썸네일 이미지들 */}
+            <div className="flex space-x-2 overflow-x-auto">
+              {vehicleImages.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedImage(index)}
+                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${
+                    selectedImage === index ? 'border-blue-600' : 'border-gray-200'
+                  }`}
+                >
+                  <img
+                    src={image}
+                    alt={`차량 이미지 ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 오른쪽: 상품 정보 */}
+          <div className="space-y-6">
+            {/* 상품명 및 기본 정보 */}
+            <div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
+                <span>{certificate?.manufacturer}</span>
+                <span>•</span>
+                <span>{certificate?.manufactureYear}년</span>
+                <span>•</span>
+                <span>{certificate?.mileage?.toLocaleString()}km</span>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                {certificate?.manufacturer} {certificate?.modelName}
+              </h1>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center">
+                  <div className="flex items-center mr-2">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    품질등급 {getQualityGrade()} ({getQualityScore()}점)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 가격 정보 (인증서 발급비용) */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-sm text-gray-600 mb-1">인증서 발급</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">70,000 WON</div>
+              <div className="text-sm text-gray-500">
+                • 디지털 인증서 즉시 발급
+              </div>
+              <div className="text-sm text-gray-500">
+                • PDF 다운로드 가능
+              </div>
+            </div>
+
+
+            {/* 인증서 발급 버튼 */}
+            <div className="space-y-3">
+              <Button
+                onClick={handleIssueCertificate}
+                className="w-full h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+                size="lg"
+              >
+                인증서 발급하기
+              </Button>
+              
+              {!isValid && (
+                <div className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                  ⚠️ 인증서가 만료되었습니다. 재검사 후 발급이 가능합니다.
+                </div>
+              )}
+              
+              {isValid && daysUntilExpiry <= 30 && (
+                <div className="text-center text-sm text-orange-600 bg-orange-50 p-3 rounded-lg">
+                  ⚠️ {daysUntilExpiry}일 후 만료 예정입니다.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 하단: 상세 정보 탭 */}
+        <div className="mt-12">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: 'vehicle', label: '차량정보' },
+                { id: 'inspection', label: '검사내역' },
+                { id: 'certificate', label: '인증서정보' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === tab.id
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="py-8">
+            {activeTab === 'vehicle' && (
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold mb-4">차량 기본사항</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InfoItem label="제조사" value={certificate?.manufacturer || '-'} />
+                  <InfoItem label="모델명" value={certificate?.modelName || '-'} />
+                  <InfoItem label="제조년도" value={`${certificate?.manufactureYear || '-'}년`} />
+                  <InfoItem label="차대번호(VIN)" value={certificate?.vin || '-'} />
+                  <InfoItem label="최초등록일" value={certificate?.firstRegisterDate ? new Date(certificate.firstRegisterDate).toLocaleDateString() : '-'} />
+                  <InfoItem label="주행거리" value={`${certificate?.mileage?.toLocaleString() || '-'} km`} />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'inspection' && (
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold mb-4">검사 및 인증 정보</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InfoItem label="검사일자" value={certificate?.inspectDate ? new Date(certificate.inspectDate).toLocaleDateString() : '-'} />
+                  <InfoItem label="인증상태" value={isValid ? '유효' : '만료'} />
+                  <InfoItem label="검사원 코드" value={certificate?.inspectorCode || '-'} />
+                  <InfoItem label="검사원명" value={certificate?.inspectorName || '-'} />
+                  <InfoItem label="품질등급" value={getQualityGrade()} />
+                  <InfoItem label="품질점수" value={`${getQualityScore()}점`} />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'certificate' && (
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold mb-4">인증서 발급 정보</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InfoItem label="인증번호" value={certificate?.certNumber || '-'} />
+                  <InfoItem label="발급일자" value={certificate?.issueDate ? new Date(certificate.issueDate).toLocaleDateString() : '-'} />
+                  <InfoItem label="유효기간" value={certificate?.expireDate ? new Date(certificate.expireDate).toLocaleDateString() : '-'} />
+                  <InfoItem label="발급기관" value="스마트 모빌리티 제 3자 인증 기관" />
+                  <InfoItem label="PDF 상태" value={certificate?.pdfFilePath ? '준비됨' : '준비되지 않음'} />
+                  <InfoItem label="발급 소요시간" value={getEstimatedTime()} />
+                </div>
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium mb-2">인증서 안내사항</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    본 인증서는 상기 차량이 지정된 기준에 따라 검사 및 심사를 통과하였음을 확인하기 위해 발급됩니다. 
+                    인증의 효력은 유효기간 내에 한하며, 기간 경과 시 재검사를 통해 갱신받아야 합니다.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// InfoItem 컴포넌트 정의
+interface InfoItemProps {
+  label: string;
+  value: string;
+}
+
+function InfoItem({ label, value }: InfoItemProps) {
+  return (
+    <div className="flex justify-between py-3 border-b border-gray-100 last:border-b-0">
+      <span className="text-gray-600 font-medium">{label}</span>
+      <span className="text-gray-900">{value}</span>
     </div>
   );
 }

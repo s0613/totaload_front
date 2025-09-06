@@ -12,9 +12,11 @@ interface AuthState {
   user: User | null;
   isLoggedIn: boolean;
   isHydrated: boolean;
+  isAuthChecked: boolean;
   login: (user: User) => void;
   logout: () => void;
   setHydrated: () => void;
+  setAuthChecked: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -23,6 +25,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoggedIn: false,
       isHydrated: false,
+      isAuthChecked: false,
       
       login: (user: User) => {
         set({ user, isLoggedIn: true });
@@ -39,6 +42,10 @@ export const useAuthStore = create<AuthState>()(
       
       setHydrated: () => {
         set({ isHydrated: true });
+      },
+      
+      setAuthChecked: () => {
+        set({ isAuthChecked: true });
       },
     }),
     {

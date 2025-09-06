@@ -7,18 +7,26 @@ import { userService } from "@/features/user/UserService"
 import { toast } from "sonner"
 
 export default function AuthInitializer() {
-  const { isLoggedIn, login, user, isHydrated, logout } = useAuthStore()
+  const { isLoggedIn, login, user, isHydrated, logout, isAuthChecked, setAuthChecked } = useAuthStore()
   const router = useRouter()
   const initializedRef = useRef(false)
 
   useEffect(() => {
     // Zustand가 hydrate되지 않았거나 이미 초기화되었거나 로그인 상태이면 스킵
     if (!isHydrated || initializedRef.current || (isLoggedIn && user)) {
+      // 이미 앱 상태에 로그인 정보가 있을 때도 인증 체크 완료로 표시하여
+      // 초기 화면에서 무한 로딩이 발생하지 않도록 처리
+      if (!initializedRef.current) {
+        initializedRef.current = true
+      }
+      if (!isAuthChecked) {
+        setAuthChecked()
+      }
       return
     }
 
-    // 로그아웃 상태에서 새로고침 시 불필요한 인증 확인 방지
-    if (isLoggedIn === false && user === null) {
+    // 이미 인증 체크가 끝났고 로그아웃 상태라면 스킵
+    if (isAuthChecked && isLoggedIn === false && user === null) {
       initializedRef.current = true
       return
     }
@@ -72,11 +80,12 @@ export default function AuthInitializer() {
         logout()
       } finally {
         initializedRef.current = true
+        setAuthChecked()
       }
     }
 
     initializeAuth()
-  }, [isLoggedIn, user, login, logout, router, isHydrated])
+  }, [isLoggedIn, user, login, logout, router, isHydrated, isAuthChecked, setAuthChecked])
 
   return null // 렌더링할 내용 없음
 }

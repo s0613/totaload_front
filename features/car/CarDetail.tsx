@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CertificateService, CertificateRequest, CertificateResponse } from "../certificate/CertificateService";
+import { CertificateService } from "../certificate/CertificateService";
 import { api } from "@/lib/apiClient";
 
 export interface Vehicle {
@@ -310,11 +310,7 @@ export default function CarDetail({ vehicle }: CarDetailProps) {
 
 /* ────────────────── 인증서 발급 모달 컴포넌트 ────────────────── */
 
-// 날짜를 yyyy-MM-dd 형식으로 변환하는 함수 추가
-const formatDate = (dateString?: string) => {
-  if (!dateString) return undefined;
-  return dateString.split(' ')[0];
-};
+
 
 interface IssuanceCertificateProps {
   vehicle: Vehicle;
@@ -325,27 +321,14 @@ function IssuanceCertificate({ vehicle, onClose }: IssuanceCertificateProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [certificate, setCertificate] = useState<CertificateResponse | null>(null);
+  const [certificate, setCertificate] = useState<any | null>(null); // CertificateResponse 대신 any 사용
 
   const handleIssueCertificate = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const request: CertificateRequest = {
-        vin: vehicle.vin,
-        manufacturer: vehicle.make,
-        modelName: vehicle.model,
-        manufactureYear: vehicle.manufactureYear || vehicle.year,
-        firstRegisterDate: formatDate(vehicle.registrationDate), // 날짜 포맷 변환 적용
-        mileage: vehicle.mileage,
-        inspectDate: vehicle.inspectionDate || new Date().toISOString().split('T')[0],
-        inspectorCode: vehicle.evaluatorNo || "rnrnrkrk1234",
-        inspectorName: vehicle.evaluatorName || "평가관", // 기본값 설정
-        issuedBy: vehicle.issuingAuthority || "KCIE | 한국 자동차산업 수출협동조합",
-      };
-
-      const response = await CertificateService.issueCertificate(request);
+      const response = await CertificateService.issueCertificateRequest(parseInt(vehicle.id));
       setCertificate(response);
     } catch (err) {
       console.error('인증서 발급 에러:', err);
@@ -384,35 +367,9 @@ function IssuanceCertificate({ vehicle, onClose }: IssuanceCertificateProps) {
       
       console.log('📥 PDF 다운로드 시작:', certificate.certNumber);
       
-      const blob = await CertificateService.downloadCertificate(certificate.certNumber);
-      
-      console.log('✅ PDF blob 받음:', {
-        size: blob.size,
-        type: blob.type
-      });
-      
-      // blob 유효성 검사
-      if (!blob || blob.size === 0) {
-        throw new Error('다운로드된 파일이 비어있습니다.');
-      }
-      
-      // PDF 다운로드
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `certificate_${certificate.certNumber}.pdf`;
-      
-      // 다운로드 링크 클릭
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // 메모리 정리
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 100);
-      
-      console.log('✅ PDF 다운로드 완료');
+      // downloadCertificate 메서드가 없으므로 PDF 열기 사용
+      await CertificateService.openCertificatePdf(certificate.pdfFilePath);
+      console.log('✅ PDF 열기 완료');
       onClose();
     } catch (err) {
       console.error('❌ PDF 다운로드 실패:', err);
@@ -480,7 +437,7 @@ function IssuanceCertificate({ vehicle, onClose }: IssuanceCertificateProps) {
               <div className="rounded-md bg-blue-50 p-3 text-xs text-blue-700">
                 <p><strong>개발 정보:</strong></p>
                 <p>• API URL: {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}</p>
-                <p>• 인증 상태: {api.isAuthenticated() ? '로그인됨' : '로그인 필요'}</p>
+                <p>• 인증 상태: {'로그인 상태 확인 불가'}</p>
               </div>
             )}
             
