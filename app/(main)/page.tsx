@@ -1,17 +1,15 @@
 "use client"
 
-import { useEffect } from "react"
+import { Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/lib/auth"
 import { toast } from "sonner"
 import CertificateList from "@/features/certificate/CertificateList"
 
-export default function ExportCertApp() {
+function OAuthErrorHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoggedIn, isHydrated, isAuthChecked } = useAuthStore();
 
-  // OAuth 에러 처리
   useEffect(() => {
     const error = searchParams.get('error');
     if (error) {
@@ -19,6 +17,13 @@ export default function ExportCertApp() {
       router.replace('/login');
     }
   }, [searchParams, router]);
+
+  return null;
+}
+
+export default function ExportCertApp() {
+  const router = useRouter();
+  const { user, isLoggedIn, isHydrated, isAuthChecked } = useAuthStore();
 
   // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
   useEffect(() => {
@@ -45,5 +50,12 @@ export default function ExportCertApp() {
     );
   }
 
-  return <CertificateList />;
+  return (
+    <>
+      <Suspense fallback={null}>
+        <OAuthErrorHandler />
+      </Suspense>
+      <CertificateList />
+    </>
+  );
 }
