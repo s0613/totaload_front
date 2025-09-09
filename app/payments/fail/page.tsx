@@ -1,14 +1,27 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { XCircle, ArrowLeft, RefreshCw, Home, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
+function FailParamsReader({ onUpdate }: { onUpdate: (info: { code: string | null; message: string | null; orderId: string | null }) => void }) {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const code = searchParams.get("code")
+    const message = searchParams.get("message")
+    const orderId = searchParams.get("orderId")
+
+    onUpdate({ code, message, orderId })
+  }, [searchParams, onUpdate])
+
+  return null
+}
+
 export default function PaymentFailPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [errorInfo, setErrorInfo] = useState<{
     code: string | null
     message: string | null
@@ -18,18 +31,6 @@ export default function PaymentFailPage() {
     message: null,
     orderId: null
   })
-
-  useEffect(() => {
-    const code = searchParams.get("code")
-    const message = searchParams.get("message")
-    const orderId = searchParams.get("orderId")
-
-    setErrorInfo({
-      code,
-      message,
-      orderId
-    })
-  }, [searchParams])
 
   // 에러 코드에 따른 메시지 정리
   const getErrorMessage = (code: string | null, message: string | null) => {
@@ -98,6 +99,9 @@ export default function PaymentFailPage() {
             <p className="text-gray-600">결제 처리 중 문제가 발생했습니다.</p>
           </CardHeader>
           <CardContent className="space-y-6">
+            <Suspense fallback={null}>
+              <FailParamsReader onUpdate={setErrorInfo} />
+            </Suspense>
             {/* 에러 정보 */}
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start space-x-3">

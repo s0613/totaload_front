@@ -1,18 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle, ArrowLeft, Download, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 
-export default function PaymentSuccessPage() {
-  const router = useRouter()
+function SuccessParamsProcessor({ onSuccess, onError, onDone }: {
+  onSuccess: (data: any) => void;
+  onError: (message: string) => void;
+  onDone: () => void;
+}) {
   const searchParams = useSearchParams()
-  const [isProcessing, setIsProcessing] = useState(true)
-  const [paymentData, setPaymentData] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const processPayment = async () => {
@@ -25,7 +25,6 @@ export default function PaymentSuccessPage() {
           throw new Error("결제 정보가 올바르지 않습니다.")
         }
 
-        // 결제 승인 API 호출 (실제 환경에서는 백엔드 API를 호출)
         const response = await fetch("/api/payments/confirm", {
           method: "POST",
           headers: {
@@ -43,20 +42,29 @@ export default function PaymentSuccessPage() {
         }
 
         const data = await response.json()
-        setPaymentData(data)
+        onSuccess(data)
         toast.success("결제가 성공적으로 완료되었습니다!")
         
       } catch (error: any) {
         console.error("결제 승인 처리 실패:", error)
-        setError(error.message || "결제 처리 중 오류가 발생했습니다.")
+        onError(error.message || "결제 처리 중 오류가 발생했습니다.")
         toast.error("결제 승인에 실패했습니다.")
       } finally {
-        setIsProcessing(false)
+        onDone()
       }
     }
 
     processPayment()
-  }, [searchParams])
+  }, [searchParams, onSuccess, onError, onDone])
+
+  return null
+}
+
+export default function PaymentSuccessPage() {
+  const router = useRouter()
+  const [isProcessing, setIsProcessing] = useState(true)
+  const [paymentData, setPaymentData] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
   if (isProcessing) {
     return (
@@ -119,6 +127,13 @@ export default function PaymentSuccessPage() {
             <p className="text-gray-600">인증서 발급 결제가 성공적으로 완료되었습니다.</p>
           </CardHeader>
           <CardContent className="space-y-6">
+            <Suspense fallback={null}>
+              <SuccessParamsProcessor
+                onSuccess={setPaymentData}
+                onError={setError}
+                onDone={() => setIsProcessing(false)}
+              />
+            </Suspense>
             {paymentData && (
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div className="flex justify-between text-sm">

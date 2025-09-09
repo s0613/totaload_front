@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/lib/auth"
 import { ArrowLeft, CheckCircle } from "lucide-react"
@@ -10,46 +10,47 @@ import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
 import TossPaymentWidget from "@/components/TossPaymentWidget"
 
-
-
 export default function PaymentsPage() {
   const { isLoggedIn, isHydrated, user } = useAuthStore()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [paymentData, setPaymentData] = useState<any>(null)
 
-  // 모든 useEffect를 컴포넌트 최상단에 배치
-  useEffect(() => {
-    // 인증 상태가 하이드레이션된 후에만 체크
-    if (isHydrated && !isLoggedIn) {
-      router.push("/login")
-      return
-    }
-
-    // URL 파라미터에서 결제 정보 확인
-    const certificateId = searchParams.get('certificateId')
-    const service = searchParams.get('service')
-    
-    if (certificateId && service === 'certificate_issue') {
-      const data = {
-        certificateId,
-        manufacturer: searchParams.get('manufacturer'),
-        modelName: searchParams.get('modelName'),
-        manufactureYear: searchParams.get('manufactureYear'),
-        amount: searchParams.get('amount') || '70000',
-        service: 'certificate_issue',
-        title: searchParams.get('orderName') || '인증서 발급',
-        vin: searchParams.get('vin') || '',
-        country: searchParams.get('country') || ''
+  function ParamsInitializer() {
+    const searchParams = useSearchParams()
+    useEffect(() => {
+      if (isHydrated && !isLoggedIn) {
+        router.push("/login")
+        return
       }
-      setPaymentData(data)
-      setShowPaymentForm(true)
-    } else if (isHydrated && isLoggedIn && !showPaymentForm) {
-      // 결제 폼이 표시되지 않는 경우 - 결제 내역 페이지로 리다이렉트
-      router.replace('/payments/history')
-    }
-  }, [isHydrated, isLoggedIn, router, searchParams, showPaymentForm])
+
+      const certificateId = searchParams.get('certificateId')
+      const service = searchParams.get('service')
+      
+      if (certificateId && service === 'certificate_issue') {
+        const data = {
+          certificateId,
+          manufacturer: searchParams.get('manufacturer'),
+          modelName: searchParams.get('modelName'),
+          manufactureYear: searchParams.get('manufactureYear'),
+          amount: searchParams.get('amount') || '70000',
+          service: 'certificate_issue',
+          title: searchParams.get('orderName') || '인증서 발급',
+          vin: searchParams.get('vin') || '',
+          country: searchParams.get('country') || ''
+        }
+        setPaymentData(data)
+        setShowPaymentForm(true)
+      } else if (isHydrated && isLoggedIn && !showPaymentForm) {
+        router.replace('/payments/history')
+      }
+    }, [isHydrated, isLoggedIn, router, searchParams, showPaymentForm])
+
+    return null
+  }
+
+  // 모든 useEffect를 컴포넌트 최상단에 배치
+  useEffect(() => {}, [])
 
   // 고유한 주문번호 생성 함수
   const generateOrderId = () => {
@@ -99,6 +100,9 @@ export default function PaymentsPage() {
   if (showPaymentForm && paymentData) {
     return (
       <div className="min-h-screen bg-white font-['Noto_Sans_KR',_'Inter',_sans-serif]">
+        <Suspense fallback={null}>
+          <ParamsInitializer />
+        </Suspense>
         {/* 상단 로고 및 헤더 */}
         <header className="border-b border-gray-100">
           <div className="max-w-4xl mx-auto px-6 py-6">
